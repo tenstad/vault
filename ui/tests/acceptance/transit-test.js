@@ -340,8 +340,9 @@ module('Acceptance | transit', function (hooks) {
         .dom('[data-test-transit-key-version-row]')
         .exists({ count: 2 }, `${name}: two key versions after rotate`);
       await click('[data-test-transit-key-actions-link]');
-      assert.ok(
-        currentURL().startsWith(`/vault/secrets/${this.path}/show/${name}?tab=actions`),
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${this.path}/show/${name}?tab=actions`,
         `${name}: navigates to transit actions`
       );
 
