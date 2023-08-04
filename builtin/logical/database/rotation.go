@@ -91,9 +91,7 @@ func (b *databaseBackend) populateQueue(ctx context.Context, s logical.Storage) 
 					log.Warn("unable to delete WAL", "error", err, "WAL ID", walEntry.walID)
 				}
 			} else {
-				log.Info("found WAL for role",
-					"role", item.Key,
-					"WAL ID", walEntry.walID)
+				log.Info("found WAL for role", "role", item.Key, "WAL ID", walEntry.walID)
 				item.Value = walEntry.walID
 				item.Priority = time.Now().Unix()
 			}
@@ -259,8 +257,21 @@ func (b *databaseBackend) rotateCredential(ctx context.Context, s logical.Storag
 	}
 
 	// Update priority and push updated Item to the queue
-	nextRotation := lvr.Add(role.StaticAccount.RotationPeriod)
-	item.Priority = nextRotation.Unix()
+	if role.StaticAccount.RotationSchedule != "" {
+		schedule, err := b.scheduleParser.Parse(role.StaticAccount.RotationSchedule)
+		if err != nil {
+			b.logger.Error("could not parse rotation_schedule", "error", err)
+			return true
+		}
+		next := schedule.Next(lvr)
+		b.logger.Debug("update priority for Schedule", "lvr", lvr)
+		b.logger.Debug("update priority for Schedule", "next", next)
+		item.Priority = schedule.Next(lvr).Unix()
+	} else {
+		b.logger.Debug("update priority for RotationPeriod", "lvr", lvr, "next", lvr.Add(role.StaticAccount.RotationPeriod))
+		item.Priority = lvr.Add(role.StaticAccount.RotationPeriod).Unix()
+	}
+
 	if err := b.pushItem(item); err != nil {
 		b.logger.Warn("unable to push item on to queue", "error", err)
 	}
