@@ -133,7 +133,16 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 		b.nodeIDList[0] = formatterNodeID
 		b.nodeMap[formatterNodeID] = f
 
-		sinkNode, err := event.NewSyslogSink(format, event.WithFacility(facility), event.WithTag(tag))
+		// TODO: PW: We should maintain the ID (name/path) and a channel for each sink node.
+		// need to configure something to listen for messages over the channel and
+		// stick them in go-metrics
+		telemetryChan := make(chan<- map[string]any)
+
+		sinkNode, err := event.NewSyslogSink(
+			format,
+			event.WithFacility(facility),
+			event.WithTag(tag),
+			event.WithChannel(telemetryChan))
 		if err != nil {
 			return nil, fmt.Errorf("error creating syslog sink node: %w", err)
 		}

@@ -28,6 +28,7 @@ type options struct {
 	withSocketType  string
 	withMaxDuration time.Duration
 	withFileMode    *os.FileMode
+	withChannel     chan<- map[string]any
 }
 
 // getDefaultOptions returns Options with their default values.
@@ -190,6 +191,20 @@ func WithFileMode(mode string) Option {
 			m := os.FileMode(raw)
 			o.withFileMode = &m
 		}
+
+		return nil
+	}
+}
+
+// WithChannel provides an Option to supply a channel which can be used to emit
+// messages from a sink.
+func WithChannel(c chan<- map[string]any) Option {
+	return func(o *options) error {
+		if c == nil {
+			return errors.New("channel cannot be nil")
+		}
+
+		o.withChannel = c
 
 		return nil
 	}

@@ -23,10 +23,11 @@ type SocketSink struct {
 	maxDuration    time.Duration
 	socketLock     sync.RWMutex
 	connection     net.Conn
+	telemetryChan  chan<- map[string]any // TODO: PW: strong type?
 }
 
 // NewSocketSink should be used to create a new SocketSink.
-// Accepted options: WithMaxDuration and WithSocketType.
+// Accepted options: WithMaxDuration, WithSocketType, WithChannel.
 func NewSocketSink(format string, address string, opt ...Option) (*SocketSink, error) {
 	const op = "event.NewSocketSink"
 
@@ -42,6 +43,7 @@ func NewSocketSink(format string, address string, opt ...Option) (*SocketSink, e
 		maxDuration:    opts.withMaxDuration,
 		socketLock:     sync.RWMutex{},
 		connection:     nil,
+		telemetryChan:  opts.withChannel,
 	}
 
 	return sink, nil
@@ -50,6 +52,19 @@ func NewSocketSink(format string, address string, opt ...Option) (*SocketSink, e
 // Process handles writing the event to the socket.
 func (s *SocketSink) Process(ctx context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
 	const op = "event.(SocketSink).Process"
+
+	// Telemetry data
+	m := map[string]any{
+		"success": false,
+		"created": e.CreatedAt,
+	}
+
+	// Ensure we emit telemetry before returning.
+	defer func() {
+		if s.telemetryChan != nil {
+			s.telemetryChan <- m
+		}
+	}()
 
 	select {
 	case <-ctx.Done():
@@ -87,11 +102,12 @@ func (s *SocketSink) Process(ctx context.Context, e *eventlogger.Event) (*eventl
 
 	// Format the error nicely if we need to return one.
 	if err != nil {
-		err = fmt.Errorf("%s: error writing to socket: %w", op, err)
+		return nil, fmt.Errorf("%s: error writing to socket: %w", op, err)
 	}
 
-	// return nil for the event to indicate the pipeline is complete.
-	return nil, err
+	// update telemetry and return nil for the event to indicate the pipeline is complete.
+	m["success"] = true
+	return nil, nil
 }
 
 // Reopen handles reopening the connection for the socket sink.

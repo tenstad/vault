@@ -16,10 +16,11 @@ import (
 type SyslogSink struct {
 	requiredFormat string
 	logger         gsyslog.Syslogger
+	telemetryChan  chan<- map[string]any
 }
 
 // NewSyslogSink should be used to create a new SyslogSink.
-// Accepted options: WithFacility and WithTag.
+// Accepted options: WithFacility, WithTag,  WithChannel.
 func NewSyslogSink(format string, opt ...Option) (*SyslogSink, error) {
 	const op = "event.NewSyslogSink"
 
@@ -33,12 +34,29 @@ func NewSyslogSink(format string, opt ...Option) (*SyslogSink, error) {
 		return nil, fmt.Errorf("%s: error creating syslogger: %w", op, err)
 	}
 
-	return &SyslogSink{requiredFormat: format, logger: logger}, nil
+	return &SyslogSink{
+		requiredFormat: format,
+		logger:         logger,
+		telemetryChan:  opts.withChannel,
+	}, nil
 }
 
 // Process handles writing the event to the syslog.
 func (s *SyslogSink) Process(ctx context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
 	const op = "event.(SyslogSink).Process"
+
+	// Telemetry data
+	m := map[string]any{
+		"success": false,
+		"created": e.CreatedAt,
+	}
+
+	// Ensure we emit telemetry before returning.
+	defer func() {
+		if s.telemetryChan != nil {
+			s.telemetryChan <- m
+		}
+	}()
 
 	select {
 	case <-ctx.Done():
@@ -60,7 +78,8 @@ func (s *SyslogSink) Process(ctx context.Context, e *eventlogger.Event) (*eventl
 		return nil, fmt.Errorf("%s: error writing to syslog: %w", op, err)
 	}
 
-	// return nil for the event to indicate the pipeline is complete.
+	// update telemetry and return nil for the event to indicate the pipeline is complete.
+	m["success"] = true
 	return nil, nil
 }
 

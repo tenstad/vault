@@ -82,16 +82,16 @@ func TestOptions_WithID(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			options := &options{}
+			opts := &options{}
 			applyOption := WithID(tc.Value)
-			err := applyOption(options)
+			err := applyOption(opts)
 			switch {
 			case tc.IsErrorExpected:
 				require.Error(t, err)
 				require.EqualError(t, err, tc.ExpectedErrorMessage)
 			default:
 				require.NoError(t, err)
-				require.Equal(t, tc.ExpectedValue, options.withID)
+				require.Equal(t, tc.ExpectedValue, opts.withID)
 			}
 		})
 	}
@@ -222,11 +222,11 @@ func TestOptions_WithFacility(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			options := &options{}
+			opts := &options{}
 			applyOption := WithFacility(tc.Value)
-			err := applyOption(options)
+			err := applyOption(opts)
 			require.NoError(t, err)
-			require.Equal(t, tc.ExpectedValue, options.withFacility)
+			require.Equal(t, tc.ExpectedValue, opts.withFacility)
 		})
 	}
 }
@@ -260,11 +260,11 @@ func TestOptions_WithTag(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			options := &options{}
+			opts := &options{}
 			applyOption := WithTag(tc.Value)
-			err := applyOption(options)
+			err := applyOption(opts)
 			require.NoError(t, err)
-			require.Equal(t, tc.ExpectedValue, options.withTag)
+			require.Equal(t, tc.ExpectedValue, opts.withTag)
 		})
 	}
 }
@@ -298,11 +298,11 @@ func TestOptions_WithSocketType(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			options := &options{}
+			opts := &options{}
 			applyOption := WithSocketType(tc.Value)
-			err := applyOption(options)
+			err := applyOption(opts)
 			require.NoError(t, err)
-			require.Equal(t, tc.ExpectedValue, options.withSocketType)
+			require.Equal(t, tc.ExpectedValue, opts.withSocketType)
 		})
 	}
 }
@@ -346,16 +346,16 @@ func TestOptions_WithMaxDuration(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			options := &options{}
+			opts := &options{}
 			applyOption := WithMaxDuration(tc.Value)
-			err := applyOption(options)
+			err := applyOption(opts)
 			switch {
 			case tc.IsErrorExpected:
 				require.Error(t, err)
 				require.EqualError(t, err, tc.ExpectedErrorMessage)
 			default:
 				require.NoError(t, err)
-				require.Equal(t, tc.ExpectedValue, options.withMaxDuration)
+				require.Equal(t, tc.ExpectedValue, opts.withMaxDuration)
 			}
 		})
 	}
@@ -402,9 +402,9 @@ func TestOptions_WithFileMode(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			options := &options{}
+			opts := &options{}
 			applyOption := WithFileMode(tc.Value)
-			err := applyOption(options)
+			err := applyOption(opts)
 			switch {
 			case tc.IsErrorExpected:
 				require.Error(t, err)
@@ -414,12 +414,49 @@ func TestOptions_WithFileMode(t *testing.T) {
 				switch {
 				case tc.IsNilExpected:
 					// Optional Option 'not supplied' (i.e. was whitespace/empty string)
-					require.Nil(t, options.withFileMode)
+					require.Nil(t, opts.withFileMode)
 				default:
 					// Dereference the pointer, so we can examine the file mode.
-					require.Equal(t, tc.ExpectedValue, *options.withFileMode)
+					require.Equal(t, tc.ExpectedValue, *opts.withFileMode)
 				}
 			}
 		})
+	}
+}
+
+// TestOptions_WithChannel ensures that we can pass a working channel as an option.
+func TestOptions_WithChannel(t *testing.T) {
+	opts := &options{}
+
+	// Test nil channel
+	applyOption := WithChannel(nil)
+	err := applyOption(opts)
+	require.Error(t, err)
+	require.EqualError(t, err, "channel cannot be nil")
+
+	// Test valid channel
+	ch := make(chan map[string]any)
+	applyOption = WithChannel(ch)
+	err = applyOption(opts)
+	require.NoError(t, err)
+
+	// Test emitting telemetry from channel
+	go func() {
+		m := make(map[string]any)
+		m["foo"] = "bar"
+		opts.withChannel <- m
+	}()
+
+	for {
+		select {
+		case x, ok := <-ch:
+			require.NotNil(t, x)
+			require.True(t, ok)
+			require.Equal(t, "bar", x["foo"])
+			return
+		case <-time.After(2 * time.Second):
+			t.Error("timeout waiting for message on channel")
+			return
+		}
 	}
 }
