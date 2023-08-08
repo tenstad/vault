@@ -30,7 +30,7 @@ func NewNoopSink(opt ...Option) (*NoopSink, error) {
 	}
 
 	return &NoopSink{
-		telemetryChan: opts.withChannel,
+		telemetryChan: opts.withSendChannel,
 	}, nil
 }
 

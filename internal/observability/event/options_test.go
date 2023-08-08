@@ -429,14 +429,14 @@ func TestOptions_WithChannel(t *testing.T) {
 	opts := &options{}
 
 	// Test nil channel
-	applyOption := WithChannel(nil)
+	applyOption := WithSendChannel(nil)
 	err := applyOption(opts)
 	require.Error(t, err)
 	require.EqualError(t, err, "channel cannot be nil")
 
 	// Test valid channel
 	ch := make(chan map[string]any)
-	applyOption = WithChannel(ch)
+	applyOption = WithSendChannel(ch)
 	err = applyOption(opts)
 	require.NoError(t, err)
 
@@ -444,7 +444,7 @@ func TestOptions_WithChannel(t *testing.T) {
 	go func() {
 		m := make(map[string]any)
 		m["foo"] = "bar"
-		opts.withChannel <- m
+		opts.withSendChannel <- m
 	}()
 
 	for {

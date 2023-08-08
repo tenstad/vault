@@ -25,7 +25,7 @@ type StdoutSink struct {
 
 // NewStdoutSinkNode creates a new StdoutSink that will persist the events
 // it processes using the specified expected format.
-// Accepted options: WithChannel.
+// Accepted options: WithSendChannel.
 func NewStdoutSinkNode(format string, opt ...Option) (*StdoutSink, error) {
 	const op = "event.NewStdoutSinkNode"
 
@@ -36,7 +36,7 @@ func NewStdoutSinkNode(format string, opt ...Option) (*StdoutSink, error) {
 
 	return &StdoutSink{
 		requiredFormat: format,
-		telemetryChan:  opts.withChannel,
+		telemetryChan:  opts.withSendChannel,
 	}, nil
 }
 

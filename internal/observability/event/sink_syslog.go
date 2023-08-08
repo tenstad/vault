@@ -25,7 +25,7 @@ type SyslogSink struct {
 }
 
 // NewSyslogSink should be used to create a new SyslogSink.
-// Accepted options: WithFacility, WithTag,  WithChannel.
+// Accepted options: WithFacility, WithTag,  WithSendChannel.
 func NewSyslogSink(format string, opt ...Option) (*SyslogSink, error) {
 	const op = "event.NewSyslogSink"
 
@@ -42,7 +42,7 @@ func NewSyslogSink(format string, opt ...Option) (*SyslogSink, error) {
 	return &SyslogSink{
 		requiredFormat: format,
 		logger:         logger,
-		telemetryChan:  opts.withChannel,
+		telemetryChan:  opts.withSendChannel,
 	}, nil
 }
 

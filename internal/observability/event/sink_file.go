@@ -75,7 +75,7 @@ func NewFileSink(path string, format string, opt ...Option) (*FileSink, error) {
 		fileMode:       mode,
 		requiredFormat: format,
 		path:           p,
-		telemetryChan:  opts.withChannel,
+		telemetryChan:  opts.withSendChannel,
 	}
 
 	// Ensure that the file can be successfully opened for writing;

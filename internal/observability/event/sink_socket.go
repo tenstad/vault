@@ -32,7 +32,7 @@ type SocketSink struct {
 }
 
 // NewSocketSink should be used to create a new SocketSink.
-// Accepted options: WithMaxDuration, WithSocketType, WithChannel.
+// Accepted options: WithMaxDuration, WithSocketType, WithSendChannel.
 func NewSocketSink(format string, address string, opt ...Option) (*SocketSink, error) {
 	const op = "event.NewSocketSink"
 
@@ -48,7 +48,7 @@ func NewSocketSink(format string, address string, opt ...Option) (*SocketSink, e
 		maxDuration:    opts.withMaxDuration,
 		socketLock:     sync.RWMutex{},
 		connection:     nil,
-		telemetryChan:  opts.withChannel,
+		telemetryChan:  opts.withSendChannel,
 	}
 
 	return sink, nil
