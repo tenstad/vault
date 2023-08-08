@@ -15,6 +15,11 @@ import (
 	"github.com/hashicorp/eventlogger"
 )
 
+var (
+	_ eventlogger.Closer = (*SocketSink)(nil)
+	_ eventlogger.Node   = (*SocketSink)(nil)
+)
+
 // SocketSink is a sink node which handles writing events to socket.
 type SocketSink struct {
 	requiredFormat string
@@ -128,6 +133,16 @@ func (s *SocketSink) Reopen() error {
 // Type describes the type of this node (sink).
 func (_ *SocketSink) Type() eventlogger.NodeType {
 	return eventlogger.NodeTypeSink
+}
+
+// Close can be called by the eventlogger.Broker when nodes are removed to ensure
+// they close any resources they are holding.
+func (s *SocketSink) Close(ctx context.Context) error {
+	if s.telemetryChan != nil {
+		close(s.telemetryChan)
+	}
+
+	return nil
 }
 
 // connect attempts to establish a connection using the socketType and address.

@@ -11,7 +11,10 @@ import (
 	"github.com/hashicorp/eventlogger"
 )
 
-var _ eventlogger.Node = (*StdoutSink)(nil)
+var (
+	_ eventlogger.Closer = (*StdoutSink)(nil)
+	_ eventlogger.Node   = (*StdoutSink)(nil)
+)
 
 // StdoutSink is structure that implements the eventlogger.Node interface
 // as a Sink node that writes the events to the standard output stream.
@@ -87,4 +90,14 @@ func (s *StdoutSink) Reopen() error {
 // Type returns the eventlogger.NodeTypeSink constant.
 func (s *StdoutSink) Type() eventlogger.NodeType {
 	return eventlogger.NodeTypeSink
+}
+
+// Close can be called by the eventlogger.Broker when nodes are removed to ensure
+// they close any resources they are holding.
+func (s *StdoutSink) Close(ctx context.Context) error {
+	if s.telemetryChan != nil {
+		close(s.telemetryChan)
+	}
+
+	return nil
 }

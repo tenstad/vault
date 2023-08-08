@@ -10,6 +10,11 @@ import (
 	"github.com/hashicorp/eventlogger"
 )
 
+var (
+	_ eventlogger.Closer = (*NoopSink)(nil)
+	_ eventlogger.Node   = (*NoopSink)(nil)
+)
+
 // NoopSink is a sink node which ignores/discards everything.
 type NoopSink struct {
 	telemetryChan chan<- map[string]any // TODO: PW: strong type?
@@ -53,4 +58,14 @@ func (s *NoopSink) Reopen() error {
 // Type describes the type of this node (sink).
 func (s *NoopSink) Type() eventlogger.NodeType {
 	return eventlogger.NodeTypeSink
+}
+
+// Close can be called by the eventlogger.Broker when nodes are removed to ensure
+// they close any resources they are holding.
+func (s *NoopSink) Close(ctx context.Context) error {
+	if s.telemetryChan != nil {
+		close(s.telemetryChan)
+	}
+
+	return nil
 }

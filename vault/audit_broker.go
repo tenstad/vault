@@ -71,6 +71,12 @@ func (a *AuditBroker) Register(name string, b audit.Backend, local bool) error {
 			return err
 		}
 
+		// TODO: PW: We should make sure we track channels created for sink nodes
+		// When we RemovePipelinesAndNodes the broker will attempt to call the Close
+		// function on them (see: Closer interface) which will close the telemetry
+		// channel, we need to observe this happening and remove them from being
+		// tracked.
+		// Currently we create all the nodes in the Factory function.
 		err = b.RegisterNodesAndPipeline(a.broker, name)
 		if err != nil {
 			return err

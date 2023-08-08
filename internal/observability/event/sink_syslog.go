@@ -12,6 +12,11 @@ import (
 	"github.com/hashicorp/eventlogger"
 )
 
+var (
+	_ eventlogger.Closer = (*SyslogSink)(nil)
+	_ eventlogger.Node   = (*SyslogSink)(nil)
+)
+
 // SyslogSink is a sink node which handles writing events to syslog.
 type SyslogSink struct {
 	requiredFormat string
@@ -91,4 +96,14 @@ func (_ *SyslogSink) Reopen() error {
 // Type describes the type of this node (sink).
 func (_ *SyslogSink) Type() eventlogger.NodeType {
 	return eventlogger.NodeTypeSink
+}
+
+// Close can be called by the eventlogger.Broker when nodes are removed to ensure
+// they close any resources they are holding.
+func (s *SyslogSink) Close(ctx context.Context) error {
+	if s.telemetryChan != nil {
+		close(s.telemetryChan)
+	}
+
+	return nil
 }

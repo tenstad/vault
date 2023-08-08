@@ -22,6 +22,11 @@ const (
 	devnull         = "/dev/null"
 )
 
+var (
+	_ eventlogger.Closer = (*FileSink)(nil)
+	_ eventlogger.Node   = (*FileSink)(nil)
+)
+
 // FileSink is a sink node which handles writing events to file.
 type FileSink struct {
 	file           *os.File
@@ -159,6 +164,16 @@ func (s *FileSink) Reopen() error {
 // Type describes the type of this node (sink).
 func (s *FileSink) Type() eventlogger.NodeType {
 	return eventlogger.NodeTypeSink
+}
+
+// Close can be called by the eventlogger.Broker when nodes are removed to ensure
+// they close any resources they are holding.
+func (s *FileSink) Close(ctx context.Context) error {
+	if s.telemetryChan != nil {
+		close(s.telemetryChan)
+	}
+
+	return nil
 }
 
 // open attempts to open a file at the sink's path, with the sink's fileMode permissions
