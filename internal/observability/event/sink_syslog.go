@@ -45,6 +45,16 @@ func NewSyslogSink(format string, opt ...Option) (*SyslogSink, error) {
 func (s *SyslogSink) Process(ctx context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
 	const op = "event.(SyslogSink).Process"
 
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
+
+	if e == nil {
+		return nil, fmt.Errorf("%s: event is nil: %w", op, ErrInvalidParameter)
+	}
+
 	// Telemetry data
 	m := map[string]any{
 		"success": false,
@@ -57,16 +67,6 @@ func (s *SyslogSink) Process(ctx context.Context, e *eventlogger.Event) (*eventl
 			s.telemetryChan <- m
 		}
 	}()
-
-	select {
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	default:
-	}
-
-	if e == nil {
-		return nil, fmt.Errorf("%s: event is nil: %w", op, ErrInvalidParameter)
-	}
 
 	formatted, found := e.Format(s.requiredFormat)
 	if !found {

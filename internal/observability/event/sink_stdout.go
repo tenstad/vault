@@ -41,6 +41,16 @@ func NewStdoutSinkNode(format string, opt ...Option) (*StdoutSink, error) {
 func (s *StdoutSink) Process(ctx context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
 	const op = "event.(StdoutSink).Process"
 
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
+
+	if e == nil {
+		return nil, fmt.Errorf("%s: event is nil: %w", op, ErrInvalidParameter)
+	}
+
 	// Telemetry data
 	m := map[string]any{
 		"success": false,
@@ -53,16 +63,6 @@ func (s *StdoutSink) Process(ctx context.Context, e *eventlogger.Event) (*eventl
 			s.telemetryChan <- m
 		}
 	}()
-
-	select {
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	default:
-	}
-
-	if e == nil {
-		return nil, fmt.Errorf("%s: event is nil: %w", op, ErrInvalidParameter)
-	}
 
 	formattedBytes, found := e.Format(s.requiredFormat)
 	if !found {

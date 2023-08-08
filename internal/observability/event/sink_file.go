@@ -87,6 +87,16 @@ func NewFileSink(path string, format string, opt ...Option) (*FileSink, error) {
 func (s *FileSink) Process(ctx context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
 	const op = "event.(FileSink).Process"
 
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
+
+	if e == nil {
+		return nil, fmt.Errorf("%s: event is nil: %w", op, ErrInvalidParameter)
+	}
+
 	// Telemetry data
 	m := map[string]any{
 		"success": false,
@@ -99,16 +109,6 @@ func (s *FileSink) Process(ctx context.Context, e *eventlogger.Event) (*eventlog
 			s.telemetryChan <- m
 		}
 	}()
-
-	select {
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	default:
-	}
-
-	if e == nil {
-		return nil, fmt.Errorf("%s: event is nil: %w", op, ErrInvalidParameter)
-	}
 
 	// '/dev/null' path means we just do nothing and pretend we're done.
 	if s.path == devnull {

@@ -53,6 +53,19 @@ func NewSocketSink(format string, address string, opt ...Option) (*SocketSink, e
 func (s *SocketSink) Process(ctx context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
 	const op = "event.(SocketSink).Process"
 
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
+
+	if e == nil {
+		return nil, fmt.Errorf("%s: event is nil: %w", op, ErrInvalidParameter)
+	}
+
+	s.socketLock.Lock()
+	defer s.socketLock.Unlock()
+
 	// Telemetry data
 	m := map[string]any{
 		"success": false,
@@ -65,19 +78,6 @@ func (s *SocketSink) Process(ctx context.Context, e *eventlogger.Event) (*eventl
 			s.telemetryChan <- m
 		}
 	}()
-
-	select {
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	default:
-	}
-
-	s.socketLock.Lock()
-	defer s.socketLock.Unlock()
-
-	if e == nil {
-		return nil, fmt.Errorf("%s: event is nil: %w", op, ErrInvalidParameter)
-	}
 
 	formatted, found := e.Format(s.requiredFormat)
 	if !found {
