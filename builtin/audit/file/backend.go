@@ -162,10 +162,6 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 		b.nodeMap[formatterNodeID] = f
 
 		var sinkNode eventlogger.Node
-
-		// TODO: PW: We should maintain the ID (name/path) and a channel for each sink node.
-		// need to configure something to listen for messages over the channel and
-		// stick them in go-metrics
 		telemetryChan := make(chan<- map[string]any)
 
 		switch path {
@@ -181,9 +177,9 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 				format,
 				event.WithFileMode(strconv.FormatUint(uint64(mode), 8)),
 				event.WithSendChannel(telemetryChan))
-			if err != nil {
-				return nil, fmt.Errorf("file sink creation failed for path %q: %w", path, err)
-			}
+		}
+		if err != nil {
+			return nil, fmt.Errorf("file sink creation failed for path %q: %w", path, err)
 		}
 
 		sinkNodeID, err := event.GenerateNodeID()

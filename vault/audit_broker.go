@@ -32,7 +32,8 @@ type AuditBroker struct {
 	backends map[string]backendEntry
 	logger   log.Logger
 
-	broker *eventlogger.Broker
+	broker        *eventlogger.Broker
+	telemetryLock sync.RWMutex
 }
 
 // NewAuditBroker creates a new audit broker
@@ -71,16 +72,30 @@ func (a *AuditBroker) Register(name string, b audit.Backend, local bool) error {
 			return err
 		}
 
-		// TODO: PW: We should make sure we track channels created for sink nodes
-		// When we RemovePipelinesAndNodes the broker will attempt to call the Close
-		// function on them (see: Closer interface) which will close the telemetry
-		// channel, we need to observe this happening and remove them from being
-		// tracked.
-		// Currently we create all the nodes in the Factory function.
-		err = b.RegisterNodesAndPipeline(a.broker, name)
+		receiveTelemetryChan, err := b.RegisterNodesAndPipeline(a.broker, name)
 		if err != nil {
 			return err
 		}
+
+		// Listen to telemetry coming from channel
+		go func(n string) { // TODO: PW: No context passed in to check for cancellation
+			for {
+				select {
+				case data, ok := <-receiveTelemetryChan:
+					if !ok {
+						return // channel closed.
+					}
+
+					// TODO: PW: how do we know its a log_request or log_response being captured? :(
+					// TODO: PW: do we care about 'success'?
+					created, found := data["created"]
+					if found {
+						metrics.MeasureSince([]string{"audit", n, "log_request"}, created.(time.Time))
+					}
+				default:
+				}
+			}
+		}(name)
 	}
 
 	return nil

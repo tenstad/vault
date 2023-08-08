@@ -137,10 +137,6 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 		}
 		b.nodeIDList[0] = formatterNodeID
 		b.nodeMap[formatterNodeID] = f
-
-		// TODO: PW: We should maintain the ID (name/path) and a channel for each sink node.
-		// need to configure something to listen for messages over the channel and
-		// stick them in go-metrics.
 		telemetryChan := make(chan map[string]any)
 
 		sinkNode, err := event.NewSocketSink(
@@ -325,12 +321,12 @@ func (b *Backend) Salt(ctx context.Context) (*salt.Salt, error) {
 	if b.salt != nil {
 		return b.salt, nil
 	}
-	salt, err := salt.NewSalt(ctx, b.saltView, b.saltConfig)
+	s, err := salt.NewSalt(ctx, b.saltView, b.saltConfig)
 	if err != nil {
 		return nil, err
 	}
-	b.salt = salt
-	return salt, nil
+	b.salt = s
+	return b.salt, nil
 }
 
 func (b *Backend) Invalidate(_ context.Context) {
