@@ -100,7 +100,7 @@ func (_ *SyslogSink) Type() eventlogger.NodeType {
 
 // Close can be called by the eventlogger.Broker when nodes are removed to ensure
 // they close any resources they are holding.
-func (s *SyslogSink) Close(ctx context.Context) error {
+func (s *SyslogSink) Close(_ context.Context) error {
 	if s.telemetryChan != nil {
 		close(s.telemetryChan)
 	}

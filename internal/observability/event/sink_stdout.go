@@ -94,7 +94,7 @@ func (s *StdoutSink) Type() eventlogger.NodeType {
 
 // Close can be called by the eventlogger.Broker when nodes are removed to ensure
 // they close any resources they are holding.
-func (s *StdoutSink) Close(ctx context.Context) error {
+func (s *StdoutSink) Close(_ context.Context) error {
 	if s.telemetryChan != nil {
 		close(s.telemetryChan)
 	}

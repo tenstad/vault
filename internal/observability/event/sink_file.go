@@ -168,7 +168,7 @@ func (s *FileSink) Type() eventlogger.NodeType {
 
 // Close can be called by the eventlogger.Broker when nodes are removed to ensure
 // they close any resources they are holding.
-func (s *FileSink) Close(ctx context.Context) error {
+func (s *FileSink) Close(_ context.Context) error {
 	if s.telemetryChan != nil {
 		close(s.telemetryChan)
 	}
