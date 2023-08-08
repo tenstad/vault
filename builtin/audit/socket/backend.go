@@ -140,15 +140,15 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 
 		// TODO: PW: We should maintain the ID (name/path) and a channel for each sink node.
 		// need to configure something to listen for messages over the channel and
-		// stick them in go-metrics
-		telemetryChan := make(chan<- map[string]any)
+		// stick them in go-metrics.
+		telemetryChan := make(chan map[string]any)
 
 		sinkNode, err := event.NewSocketSink(
 			format,
 			address,
 			event.WithSocketType(socketType),
 			event.WithMaxDuration(writeDuration.String()),
-			event.WithChannel(telemetryChan))
+			event.WithSendChannel(telemetryChan))
 		if err != nil {
 			return nil, fmt.Errorf("error creating socket sink node: %w", err)
 		}
@@ -158,6 +158,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 		}
 		b.nodeIDList[1] = sinkNodeID
 		b.nodeMap[sinkNodeID] = sinkNode
+		b.telemetryChan = telemetryChan // TODO: PW: store the sink node's channel
 	}
 
 	return b, nil
@@ -181,8 +182,9 @@ type Backend struct {
 	saltConfig *salt.Config
 	saltView   logical.Storage
 
-	nodeIDList []eventlogger.NodeID
-	nodeMap    map[eventlogger.NodeID]eventlogger.Node
+	nodeIDList    []eventlogger.NodeID
+	nodeMap       map[eventlogger.NodeID]eventlogger.Node
+	telemetryChan chan map[string]any // TODO: PW: strong type + cleanup?
 }
 
 var _ audit.Backend = (*Backend)(nil)
@@ -339,10 +341,10 @@ func (b *Backend) Invalidate(_ context.Context) {
 
 // RegisterNodesAndPipeline registers the nodes and a pipeline as required by
 // the audit.Backend interface.
-func (b *Backend) RegisterNodesAndPipeline(broker *eventlogger.Broker, name string) error {
+func (b *Backend) RegisterNodesAndPipeline(broker *eventlogger.Broker, name string) (<-chan map[string]any, error) {
 	for id, node := range b.nodeMap {
 		if err := broker.RegisterNode(id, node); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
@@ -352,5 +354,10 @@ func (b *Backend) RegisterNodesAndPipeline(broker *eventlogger.Broker, name stri
 		NodeIDs:    b.nodeIDList,
 	}
 
-	return broker.RegisterPipeline(pipeline)
+	err := broker.RegisterPipeline(pipeline)
+	if err != nil {
+		return nil, err
+	}
+
+	return b.telemetryChan, nil
 }

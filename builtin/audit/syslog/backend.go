@@ -142,7 +142,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 			format,
 			event.WithFacility(facility),
 			event.WithTag(tag),
-			event.WithChannel(telemetryChan))
+			event.WithSendChannel(telemetryChan))
 		if err != nil {
 			return nil, fmt.Errorf("error creating syslog sink node: %w", err)
 		}
@@ -169,8 +169,9 @@ type Backend struct {
 	saltConfig *salt.Config
 	saltView   logical.Storage
 
-	nodeIDList []eventlogger.NodeID
-	nodeMap    map[eventlogger.NodeID]eventlogger.Node
+	nodeIDList    []eventlogger.NodeID
+	nodeMap       map[eventlogger.NodeID]eventlogger.Node
+	telemetryChan chan map[string]any // TODO: PW: strong type + cleanup?
 }
 
 var _ audit.Backend = (*Backend)(nil)
@@ -246,10 +247,10 @@ func (b *Backend) Invalidate(_ context.Context) {
 
 // RegisterNodesAndPipeline registers the nodes and a pipeline as required by
 // the audit.Backend interface.
-func (b *Backend) RegisterNodesAndPipeline(broker *eventlogger.Broker, name string) error {
+func (b *Backend) RegisterNodesAndPipeline(broker *eventlogger.Broker, name string) (<-chan map[string]any, error) {
 	for id, node := range b.nodeMap {
 		if err := broker.RegisterNode(id, node); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
@@ -259,5 +260,10 @@ func (b *Backend) RegisterNodesAndPipeline(broker *eventlogger.Broker, name stri
 		NodeIDs:    b.nodeIDList,
 	}
 
-	return broker.RegisterPipeline(pipeline)
+	err := broker.RegisterPipeline(pipeline)
+	if err != nil {
+		return nil, err
+	}
+
+	return b.telemetryChan, nil
 }

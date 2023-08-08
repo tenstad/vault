@@ -296,7 +296,7 @@ type Backend interface {
 	// the Backend can call its RegisterNode and RegisterPipeline methods with
 	// the nodes and the pipeline that were created in the corresponding
 	// Factory function.
-	RegisterNodesAndPipeline(*eventlogger.Broker, string) error
+	RegisterNodesAndPipeline(*eventlogger.Broker, string) (<-chan map[string]any, error)
 }
 
 // BackendConfig contains configuration parameters used in the factory func to
