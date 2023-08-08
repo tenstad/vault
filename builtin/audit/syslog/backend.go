@@ -132,7 +132,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 		}
 		b.nodeIDList[0] = formatterNodeID
 		b.nodeMap[formatterNodeID] = f
-		telemetryChan := make(chan<- map[string]any)
+		telemetryChan := make(chan map[string]any)
 
 		sinkNode, err := event.NewSyslogSink(
 			format,
@@ -149,6 +149,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 		}
 		b.nodeIDList[1] = sinkNodeID
 		b.nodeMap[sinkNodeID] = sinkNode
+		b.telemetryChan = telemetryChan // TODO: PW: store the sink node's channel
 	}
 	return b, nil
 }

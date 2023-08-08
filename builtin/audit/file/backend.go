@@ -162,7 +162,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 		b.nodeMap[formatterNodeID] = f
 
 		var sinkNode eventlogger.Node
-		telemetryChan := make(chan<- map[string]any)
+		telemetryChan := make(chan map[string]any)
 
 		switch path {
 		case "stdout":
@@ -189,6 +189,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 
 		b.nodeIDList[1] = sinkNodeID
 		b.nodeMap[sinkNodeID] = sinkNode
+		b.telemetryChan = telemetryChan // TODO: PW: store the sink node's channel
 	} else {
 		switch path {
 		case "stdout":

@@ -238,12 +238,6 @@ func (a *AuditBroker) LogRequest(ctx context.Context, in *logical.LogInput, head
 			e.Data = in
 
 			_, err = a.broker.Send(ctx, eventlogger.EventType(event.AuditType.String()), e)
-			// TODO: old behavior includes the name (path) for the audit device,
-			// but we cannot know this anymore, do we just omit it, or include
-			// something like 'all'?
-			// If we can later change the semantics of the eventbroker to report back
-			// as sinks complete then we might be able to reinstate the old behavior.
-			metrics.MeasureSince([]string{"audit", "log_request"}, e.Timestamp)
 			if err != nil {
 				retErr = multierror.Append(retErr, err)
 			}
