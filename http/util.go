@@ -63,9 +63,8 @@ func rateLimitQuotaWrapping(handler http.Handler, core *vault.Core) http.Handler
 
 		role := core.DetermineRoleFromLoginRequestFromBytes(mountPath, bodyBytes, r.Context())
 
-		ctx := r.Context()
-		ctx = context.WithValue(ctx, "request_role", role)
-		r = r.WithContext(ctx)
+		// add an entry to the context to prevent recalculating request role unnecessarily
+		r = r.WithContext(context.WithValue(r.Context(), logical.CtxKeyRequestRole{}, role))
 
 		quotaResp, err := core.ApplyRateLimitQuota(r.Context(), &quotas.Request{
 			Type:          quotas.TypeRateLimit,

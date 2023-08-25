@@ -191,6 +191,13 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 		return nil, nil, http.StatusInternalServerError, fmt.Errorf("failed to generate identifier for the request: %w", err)
 	}
 
+	// add request role
+	requestRole, ok := r.Context().Value(logical.CtxKeyRequestRole{}).(string)
+	if !ok {
+		return nil, nil, http.StatusBadRequest, nil
+	}
+	data["role"] = requestRole
+
 	req := &logical.Request{
 		ID:         requestId,
 		Operation:  op,
@@ -281,10 +288,6 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 	if err != nil {
 		return nil, nil, http.StatusBadRequest, fmt.Errorf("failed to parse %s header: %w", PolicyOverrideHeaderName, err)
 	}
-
-	reqCtx := r.Context().Value("request_role")
-	roleStr := reqCtx.(string)
-	req.Role = roleStr
 
 	return req, origBody, 0, nil
 }

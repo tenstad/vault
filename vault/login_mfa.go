@@ -828,9 +828,9 @@ func (c *Core) LoginMFACreateToken(ctx context.Context, reqPath string, cachedAu
 		return nil, fmt.Errorf("namespace not found: %w", err)
 	}
 
+	role := c.DetermineRoleFromLoginRequest(mountPoint, loginRequestData, ctx)
 	// The request successfully authenticated itself. Run the quota checks on
 	// the original login request path before creating the token.
-	role := c.DetermineRoleFromLoginRequest(mountPoint, loginRequestData, ctx)
 	quotaResp, quotaErr := c.applyLeaseCountQuota(ctx, &quotas.Request{
 		Path:          reqPath,
 		MountPath:     strings.TrimPrefix(mountPoint, ns.Path),

@@ -864,6 +864,9 @@ func (c *Core) isLoginRequest(ctx context.Context, req *logical.Request) bool {
 func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp *logical.Response, retAuth *logical.Auth, retErr error) {
 	defer metrics.MeasureSince([]string{"core", "handle_request"}, time.Now())
 
+	// Check for request role
+	role := req.GetString("role")
+
 	var nonHMACReqDataKeys []string
 	entry := c.router.MatchingMountEntry(ctx, req.Path)
 	if entry != nil {
@@ -1012,7 +1015,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 	quotaResp, quotaErr := c.applyLeaseCountQuota(ctx, &quotas.Request{
 		Path:          req.Path,
 		MountPath:     strings.TrimPrefix(req.MountPoint, ns.Path),
-		Role:          req.Role,
+		Role:          role,
 		NamespacePath: ns.Path,
 	})
 	if quotaErr != nil {
@@ -1152,7 +1155,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 				return nil, auth, retErr
 			}
 
-			leaseID, err := registerFunc(ctx, req, resp, req.Role)
+			leaseID, err := registerFunc(ctx, req, resp, role)
 			if err != nil {
 				c.logger.Error("failed to register lease", "request_path", req.Path, "error", err)
 				retErr = multierror.Append(retErr, ErrInternalError)
@@ -1280,6 +1283,9 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 // unauthenticated request to the backend.
 func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (retResp *logical.Response, retAuth *logical.Auth, retErr error) {
 	defer metrics.MeasureSince([]string{"core", "handle_login_request"}, time.Now())
+
+	// Check for request role
+	role := req.GetString("role")
 
 	req.Unauthenticated = true
 
@@ -1460,12 +1466,10 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		// The request successfully authenticated itself. Run the quota checks
 		// before creating lease.
 
-		// reqCtx := req.Contex
-		// role := c.DetermineRoleFromLoginRequest(req.MountPoint, req.Data, ctx)
 		quotaResp, quotaErr := c.applyLeaseCountQuota(ctx, &quotas.Request{
 			Path:          req.Path,
 			MountPath:     strings.TrimPrefix(req.MountPoint, ns.Path),
-			Role:          req.Role,
+			Role:          role,
 			NamespacePath: ns.Path,
 		})
 
@@ -1657,7 +1661,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		// Attach the display name, might be used by audit backends
 		req.DisplayName = auth.DisplayName
 
-		leaseGen, respTokenCreate, errCreateToken := c.LoginCreateToken(ctx, ns, req.Path, source, resp, req.Role)
+		leaseGen, respTokenCreate, errCreateToken := c.LoginCreateToken(ctx, ns, req.Path, source, resp, role)
 		leaseGenerated = leaseGen
 		if errCreateToken != nil {
 			return respTokenCreate, nil, errCreateToken
