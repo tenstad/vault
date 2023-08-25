@@ -196,7 +196,15 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 	if !ok {
 		return nil, nil, http.StatusBadRequest, nil
 	}
-	data["role"] = requestRole
+
+	fmt.Printf("data %+v\n", data)
+	if len(data) == 0 {
+		data = map[string]interface{}{
+			"role": requestRole,
+		}
+	} else {
+		data["role"] = requestRole
+	}
 
 	req := &logical.Request{
 		ID:         requestId,
