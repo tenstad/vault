@@ -282,6 +282,10 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 		return nil, nil, http.StatusBadRequest, fmt.Errorf("failed to parse %s header: %w", PolicyOverrideHeaderName, err)
 	}
 
+	reqCtx := r.Context().Value("request_role")
+	roleStr := reqCtx.(string)
+	req.Role = roleStr
+
 	return req, origBody, 0, nil
 }
 

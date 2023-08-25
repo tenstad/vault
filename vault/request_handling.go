@@ -1009,11 +1009,10 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 	}
 
 	leaseGenerated := false
-	loginRole := c.DetermineRoleFromLoginRequest(req.MountPoint, req.Data, ctx)
 	quotaResp, quotaErr := c.applyLeaseCountQuota(ctx, &quotas.Request{
 		Path:          req.Path,
 		MountPath:     strings.TrimPrefix(req.MountPoint, ns.Path),
-		Role:          loginRole,
+		Role:          req.Role,
 		NamespacePath: ns.Path,
 	})
 	if quotaErr != nil {
@@ -1153,7 +1152,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 				return nil, auth, retErr
 			}
 
-			leaseID, err := registerFunc(ctx, req, resp, loginRole)
+			leaseID, err := registerFunc(ctx, req, resp, req.Role)
 			if err != nil {
 				c.logger.Error("failed to register lease", "request_path", req.Path, "error", err)
 				retErr = multierror.Append(retErr, ErrInternalError)
@@ -1460,11 +1459,13 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 
 		// The request successfully authenticated itself. Run the quota checks
 		// before creating lease.
-		role := c.DetermineRoleFromLoginRequest(req.MountPoint, req.Data, ctx)
+
+		// reqCtx := req.Contex
+		// role := c.DetermineRoleFromLoginRequest(req.MountPoint, req.Data, ctx)
 		quotaResp, quotaErr := c.applyLeaseCountQuota(ctx, &quotas.Request{
 			Path:          req.Path,
 			MountPath:     strings.TrimPrefix(req.MountPoint, ns.Path),
-			Role:          role,
+			Role:          req.Role,
 			NamespacePath: ns.Path,
 		})
 
@@ -1656,7 +1657,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		// Attach the display name, might be used by audit backends
 		req.DisplayName = auth.DisplayName
 
-		leaseGen, respTokenCreate, errCreateToken := c.LoginCreateToken(ctx, ns, req.Path, source, resp, role)
+		leaseGen, respTokenCreate, errCreateToken := c.LoginCreateToken(ctx, ns, req.Path, source, resp, req.Role)
 		leaseGenerated = leaseGen
 		if errCreateToken != nil {
 			return respTokenCreate, nil, errCreateToken

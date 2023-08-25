@@ -87,6 +87,7 @@ func IndexStateFromContext(ctx context.Context) *WALState {
 // by the router after policy checks; the token namespace would be the right
 // place to access them via Sentinel
 type Request struct {
+	Role string `json:"role" structs:"role" mapstructure:"role" sentinel:""`
 	// Id is the uuid associated with each request
 	ID string `json:"id" structs:"id" mapstructure:"id" sentinel:""`
 

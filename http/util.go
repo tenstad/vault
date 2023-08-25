@@ -2,6 +2,7 @@ package http
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -60,11 +61,17 @@ func rateLimitQuotaWrapping(handler http.Handler, core *vault.Core) http.Handler
 		}
 		r.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
 
+		role := core.DetermineRoleFromLoginRequestFromBytes(mountPath, bodyBytes, r.Context())
+
+		ctx := r.Context()
+		ctx = context.WithValue(ctx, "request_role", role)
+		r = r.WithContext(ctx)
+
 		quotaResp, err := core.ApplyRateLimitQuota(r.Context(), &quotas.Request{
 			Type:          quotas.TypeRateLimit,
 			Path:          path,
 			MountPath:     mountPath,
-			Role:          core.DetermineRoleFromLoginRequestFromBytes(mountPath, bodyBytes, r.Context()),
+			Role:          role,
 			NamespacePath: ns.Path,
 			ClientAddress: parseRemoteIPAddress(r),
 		})

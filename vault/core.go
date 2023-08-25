@@ -3765,7 +3765,8 @@ func (c *Core) DetermineRoleFromLoginRequestFromBytes(mountPoint string, payload
 		return ""
 	}
 
-	return c.DetermineRoleFromLoginRequest(mountPoint, data, ctx)
+	role := c.DetermineRoleFromLoginRequest(mountPoint, data, ctx)
+	return role
 }
 
 // DetermineRoleFromLoginRequest will determine the role that should be applied to a quota for a given
