@@ -482,6 +482,10 @@ func (c *Core) switchedLockHandleRequest(httpCtx context.Context, req *logical.R
 	if ok {
 		ctx = context.WithValue(ctx, logical.CtxKeyInFlightRequestID{}, inFlightReqID)
 	}
+	requestRole, ok := httpCtx.Value(logical.CtxKeyRequestRole{}).(string)
+	if ok {
+		ctx = context.WithValue(ctx, logical.CtxKeyRequestRole{}, requestRole)
+	}
 	resp, err = c.handleCancelableRequest(ctx, req)
 	req.SetTokenEntry(nil)
 	cancel()
@@ -865,7 +869,10 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 	defer metrics.MeasureSince([]string{"core", "handle_request"}, time.Now())
 
 	// Check for request role
-	role := req.GetString("role")
+	var role string
+	if reqRole := ctx.Value(logical.CtxKeyRequestRole{}); reqRole != nil {
+		role = reqRole.(string)
+	}
 
 	var nonHMACReqDataKeys []string
 	entry := c.router.MatchingMountEntry(ctx, req.Path)
@@ -1285,7 +1292,10 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 	defer metrics.MeasureSince([]string{"core", "handle_login_request"}, time.Now())
 
 	// Check for request role
-	role := req.GetString("role")
+	var role string
+	if reqRole := ctx.Value(logical.CtxKeyRequestRole{}); reqRole != nil {
+		role = reqRole.(string)
+	}
 
 	req.Unauthenticated = true
 
