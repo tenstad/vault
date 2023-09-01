@@ -176,13 +176,13 @@ ui = true
 }
 
 // DevTLSConfig is a Config that is used for dev tls mode of Vault.
-func DevTLSConfig(storageType, certDir string) (*Config, error) {
+func DevTLSConfig(storageType, certDir string, extraSANs []string) (*Config, error) {
 	ca, err := GenerateCA()
 	if err != nil {
 		return nil, err
 	}
 
-	cert, key, err := GenerateCert(ca.Template, ca.Signer)
+	cert, key, err := generateCert(ca.Template, ca.Signer, extraSANs)
 	if err != nil {
 		return nil, err
 	}
@@ -505,6 +505,10 @@ func CheckConfig(c *Config, e error) (*Config, error) {
 
 	sealMap := make(map[string]*configutil.KMS)
 	for _, seal := range c.Seals {
+		if seal.Name == "" {
+			return nil, errors.New("seals: seal name is empty")
+		}
+
 		if _, ok := sealMap[seal.Name]; ok {
 			return nil, errors.New("seals: seal names must be unique")
 		}
