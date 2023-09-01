@@ -582,7 +582,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 
 	hasPartialPaths, err := hasPartiallyWrappedPaths(ctx, backend)
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("Cannot determine if there are parrtially seal wrapped entries in storage: %v", err))
+		c.UI.Error(fmt.Sprintf("Cannot determine if there are partially seal wrapped entries in storage: %v", err))
 		return 1
 	}
 	setSealResponse, err := setSeal(c, config, infoKeys, info, existingSealGenerationInfo, hasPartialPaths)
@@ -1261,7 +1261,7 @@ func (c *ServerCommand) Run(args []string) int {
 
 	hasPartialPaths, err := hasPartiallyWrappedPaths(ctx, backend)
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("Cannot determine if there are parrtially seal wrapped entries in storage: %v", err))
+		c.UI.Error(fmt.Sprintf("Cannot determine if there are partially seal wrapped entries in storage: %v", err))
 		return 1
 	}
 	setSealResponse, err := setSeal(c, config, infoKeys, info, existingSealGenerationInfo, hasPartialPaths)
@@ -2998,6 +2998,7 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		LogicalBackends:                c.LogicalBackends,
 		Logger:                         c.logger,
 		DetectDeadlocks:                config.DetectDeadlocks,
+		ImpreciseLeaseRoleTracking:     config.ImpreciseLeaseRoleTracking,
 		DisableSentinelTrace:           config.DisableSentinelTrace,
 		DisableCache:                   config.DisableCache,
 		DisableMlock:                   config.DisableMlock,
