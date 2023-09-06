@@ -10,15 +10,14 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 
-	"github.com/hashicorp/go-hclog"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
-	"github.com/hashicorp/go-plugin/runner"
 	"github.com/hashicorp/go-secure-stdlib/plugincontainer"
-	"github.com/hashicorp/go-secure-stdlib/plugincontainer/config"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/pluginruntimeutil"
 )
 
 type PluginClientConfig struct {
@@ -45,19 +44,9 @@ type runConfig struct {
 	// Initialized with what's in PluginRunner.Env, but can be added to
 	env []string
 
-	PluginClientConfig
-}
+	runtimeConfig *pluginruntimeutil.PluginRuntimeConfig
 
-func overlayCmdSpec(base, cmd *exec.Cmd) {
-	if cmd.Path != "" {
-		base.Path = cmd.Path
-	}
-	if len(cmd.Args) > 0 {
-		base.Args = cmd.Args
-	}
-	if len(cmd.Env) > 0 {
-		base.Env = append(base.Env, cmd.Env...)
-	}
+	PluginClientConfig
 }
 
 func (rc runConfig) makeConfig(ctx context.Context) (*plugin.ClientConfig, error) {
@@ -127,26 +116,35 @@ func (rc runConfig) makeConfig(ctx context.Context) (*plugin.ClientConfig, error
 		}
 	} else {
 		clientConfig.SkipHostEnv = true
-		clientConfig.RunnerFunc = func(logger hclog.Logger, goPluginCmd *exec.Cmd, tmpDir string) (runner.Runner, error) {
-			overlayCmdSpec(goPluginCmd, cmd)
-			cfg := &config.ContainerConfig{
-				UnixSocketGroup: fmt.Sprintf("%d", os.Getgid()),
-				Image:           rc.image,
-				Tag:             rc.imageTag,
-				SHA256:          fmt.Sprintf("%x", rc.sha256),
-				Labels: map[string]string{
-					"managed-by": "hashicorp.com/vault",
-				},
-				// TODO: More configurables.
-				// Defaulting to runsc will require installing gVisor in the GitHub runner.
-				// Runtime:         "runsc",
-				// CgroupParent: "",
-				// NanoCpus: 100000000,
-				// Memory: 64 * 1024 * 1024,
-				// TODO: network
+		cfg := &plugincontainer.Config{
+			Image:  rc.image,
+			Tag:    rc.imageTag,
+			SHA256: fmt.Sprintf("%x", rc.sha256),
 
+			Env:      cmd.Env,
+			GroupAdd: os.Getgid(),
+			Runtime:  consts.DefaultContainerPluginOCIRuntime,
+			Labels: map[string]string{
+				"managed-by": "hashicorp.com/vault",
+			},
+		}
+		if cmd.Path != "" {
+			cfg.Entrypoint = []string{cmd.Path}
+		}
+		if len(cmd.Args) > 0 {
+			cfg.Args = cmd.Args
+		}
+		if rc.runtimeConfig != nil {
+			cfg.CgroupParent = rc.runtimeConfig.CgroupParent
+			cfg.NanoCpus = rc.runtimeConfig.CPU
+			cfg.Memory = rc.runtimeConfig.Memory
+			if rc.runtimeConfig.OCIRuntime != "" {
+				cfg.Runtime = rc.runtimeConfig.OCIRuntime
 			}
-			return plugincontainer.NewContainerRunner(logger, goPluginCmd, cfg, tmpDir)
+		}
+		clientConfig.RunnerFunc = cfg.NewContainerRunner
+		clientConfig.UnixSocketConfig = &plugin.UnixSocketConfig{
+			Group: strconv.Itoa(os.Getgid()),
 		}
 	}
 	return clientConfig, nil
@@ -219,12 +217,13 @@ func (r *PluginRunner) RunConfig(ctx context.Context, opts ...RunOpt) (*plugin.C
 		imageTag = strings.TrimPrefix(r.Version, "v")
 	}
 	rc := runConfig{
-		command:  r.Command,
-		image:    image,
-		imageTag: imageTag,
-		args:     r.Args,
-		sha256:   r.Sha256,
-		env:      r.Env,
+		command:       r.Command,
+		image:         image,
+		imageTag:      imageTag,
+		args:          r.Args,
+		sha256:        r.Sha256,
+		env:           r.Env,
+		runtimeConfig: r.RuntimeConfig,
 	}
 
 	for _, opt := range opts {
